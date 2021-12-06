@@ -59,3 +59,15 @@ def register(request):
   else:
     form = Registration()
   return render(request,'registration/registration_form.html',{"form":form})
+
+@login_required
+def profile(request):
+  comment_form = CommentsForm()
+  current_user = request.user
+  photos = Image.objects.all().order_by('-posted_at')
+  all_users = User.objects.all()
+  user_photos = Image.objects.filter(user_id = current_user.id).all()
+  
+  return render(request,'profile/profile.html',{"photos":photos,'all_users':all_users,'comment_form':comment_form,'user_photos':user_photos,"current_user":current_user})
+
+  
