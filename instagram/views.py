@@ -113,3 +113,11 @@ def update_profile(request):
     'profile_form':profile_form
   }
   return render(request,'profile/update.html',params)
+
+@login_required
+def follow(request,user_id):
+  followee = request.user
+  followed = Follows.objects.get(pk=user_id)
+  follow_data,created = Follows.objects.get_or_create(follower = followee,followee = followed)
+  follow_data.save()
+  return redirect('others_profile')
