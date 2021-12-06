@@ -70,4 +70,12 @@ def profile(request):
   
   return render(request,'profile/profile.html',{"photos":photos,'all_users':all_users,'comment_form':comment_form,'user_photos':user_photos,"current_user":current_user})
 
-  
+@login_required
+def search(request):
+  if 'search_user' in request.GET and request.GET["search_user"]:
+    search_term = request.GET.get('search_user')
+    users = Profile.search_profiles(search_term)
+    photos = Image.search_photos(search_term)
+    return render(request,'search.html',{"users":users,"photos":photos})
+  else:
+    return render(request,'search.html')
