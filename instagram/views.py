@@ -23,3 +23,17 @@ def index(request):
   all_users = User.objects.all()
   
   return render (request,'index.html',{"photos":photos,"comment_form":comment_form,"post":post_form,"all_users":all_users})
+
+@login_required
+def post(request):
+  if request.method == 'POST':
+    post_form = postPhotoForm(request.POST,request.FILES) 
+    if post_form.is_valid():
+      the_post = post_form.save(commit = False)
+      the_post.user = request.user
+      the_post.save()
+      return redirect('home')
+
+  else:
+    post_form = postPhotoForm()
+  return render(request,'post.html',{"post_form":post_form})
