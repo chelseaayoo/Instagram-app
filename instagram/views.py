@@ -121,3 +121,11 @@ def follow(request,user_id):
   follow_data,created = Follows.objects.get_or_create(follower = followee,followee = followed)
   follow_data.save()
   return redirect('others_profile')
+
+def like(request, image_id):
+    current_user = request.user
+    image=Image.objects.get(id=image_id)
+    new_like,created= Like.objects.get_or_create(liker=current_user, image=image)
+    new_like.save()
+
+    return HttpResponseRedirect(request.META['HTTP_REFERER'])
