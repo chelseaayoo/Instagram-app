@@ -137,3 +137,11 @@ def unfollow(request,user_id):
   follow_data = Follows.objects.filter(follower = follower,followee = followee).first()
   follow_data.delete()
   return redirect('users_profile')
+
+@login_required
+def delete(request,photo_id):
+  current_user = request.user
+  photo = Image.objects.get(pk=photo_id)
+  if photo:
+    photo.delete_post()
+  return redirect('home')
