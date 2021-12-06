@@ -37,3 +37,11 @@ def post(request):
   else:
     post_form = postPhotoForm()
   return render(request,'post.html',{"post_form":post_form})
+
+def detail(request,photo_id):
+  current_user = request.user
+  try:
+    photo = get_object_or_404(Image, pk = photo_id)
+  except ObjectDoesNotExist:
+    raise Http404()
+  return render(request, 'photo_details.html', {'photo':photo,'current_user':current_user})
