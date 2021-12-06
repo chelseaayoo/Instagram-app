@@ -38,3 +38,45 @@ class Image(models.Model):
 
   def __str__(self):
     return "%s photo" % self.photo_name
+
+class Profile(models.Model):
+  profile_photo = CloudinaryField('image')
+  bio = models.TextField()
+  user = models.OneToOneField(User,on_delete = models.CASCADE)
+
+
+  @receiver(post_save , sender = User)
+  def create_profile(instance,sender,created,**kwargs):
+    if created:
+      Profile.objects.create(user = instance)
+
+  @receiver(post_save,sender = User)
+  def save_profile(sender,instance,**kwargs):
+    instance.profile.save()
+
+  @property
+  def saved_followers(self):
+    return self.followers.count()   
+
+  @property
+  def saved_following(self):
+    return self.following.count() 
+
+
+  @property
+  def follows(self):
+    return [follow.followee for follow in self.following.all()]
+
+  @property
+  def following(self):
+    return self.followers.all()
+
+
+
+  @classmethod
+  def search_profiles(cls,search_term):
+    profiles = cls.objects.filter(user__username__icontains = search_term).all()
+    return profiles
+
+  def __str__(self):
+    return "%s profile" % self.user
