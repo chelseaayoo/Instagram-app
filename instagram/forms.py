@@ -16,3 +16,10 @@ class CommentsForm(forms.ModelForm):
   class Meta:
     model = Comment
     fields = ('comment',)
+
+class Registration(UserCreationForm):
+  email = forms.EmailField()
+
+  class Meta:
+    model = User
+    fields = ['username','email','password1','password2']
