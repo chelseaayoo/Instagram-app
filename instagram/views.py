@@ -84,3 +84,13 @@ def search(request):
 def allcomments(request,photo_id):
   photo = Image.objects.filter(pk = photo_id).first()
   return render(request,'comments.html',{"photo":photo})
+
+@login_required
+def users_profile(request,pk):
+  comment_form = CommentsForm()
+  user = User.objects.get(pk = pk)
+  photos = Image.objects.filter(user = user)
+  c_user = request.user
+  
+  return render(request,'profile/users_profile.html',{"user":user,'comment_form':comment_form,
+"photos":photos,"c_user":c_user})
