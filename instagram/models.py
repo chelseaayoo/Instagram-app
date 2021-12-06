@@ -94,3 +94,16 @@ class Like(models.Model):
 
   def __str__(self):
     return "%s like" % self.photo
+
+class Comment(models.Model):
+  comment = models.TextField()
+  photo = models.ForeignKey(Image,on_delete = models.CASCADE,related_name='comments')
+  user = models.ForeignKey(User,on_delete = models.CASCADE,related_name='comments')
+
+  @classmethod
+  def display_comments_by_photoId(cls,photo_id):
+    comments = cls.objects.filter(photo_id = photo_id)
+    return comments
+
+  def __str__(self):
+    return "%s comment" % self.photo
