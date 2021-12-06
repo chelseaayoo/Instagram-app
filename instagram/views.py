@@ -79,3 +79,8 @@ def search(request):
     return render(request,'search.html',{"users":users,"photos":photos})
   else:
     return render(request,'search.html')
+
+@login_required
+def allcomments(request,photo_id):
+  photo = Image.objects.filter(pk = photo_id).first()
+  return render(request,'comments.html',{"photo":photo})
