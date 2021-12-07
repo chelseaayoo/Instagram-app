@@ -15,7 +15,6 @@ import os
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
-from decouple import config,Csv
 import django_heroku
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -151,11 +150,11 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Email configurations remember to install python-decouple
-EMAIL_USE_TLS = config('EMAIL_USE_TLS')
-EMAIL_HOST = config('EMAIL_HOST')
-EMAIL_PORT = config('EMAIL_PORT')
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+EMAIL_USE_TLS = True
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'chelsea.ayoo@student.moringaschool.com'
+EMAIL_HOST_PASSWORD = 'chelsea1234'
 
 # Activate Django-Heroku.
 django_heroku.settings(locals())
