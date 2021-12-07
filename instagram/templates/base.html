@@ -1,24 +1,44 @@
+{% load bootstrap5 %}
+{% load static %}
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
 
     {% if title %}
-    <title>Moringa Tribune - {{title}}</title>
+    <title>Instagram Application - {{title}}</title>
     {% else %}
-      <title> Moringa Tribune </title>
+    <title> Instagram Application </title>
     {% endif %}
-  
+    <!-- favico -->
+    <link rel="shortcut icon" href="https://www.instagram.com/static/images/ico/favicon-192.png/68d99ba29cc8.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
     {% block styles %}
-      {% bootstrap_css %}
+    {% bootstrap_css %}
+    <link rel="stylesheet" href="{% static 'css/styles.css'%}">
     {% endblock %}
 
 </head>
+
 <body>
+    <!-- navbar -->
+    {% include "navbar.html" %}
+    <!-- content -->
+    {% block content %}
+
+    {%endblock%}
+
+    <!-- footer -->
+    <!-- {% include 'footer.html' %} -->
+
+    <!-- scripts -->
     {% block scripts %}
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-     {% bootstrap_javascript %}
+    {% bootstrap_javascript %}
     {% endblock %}
-    
+
 </body>
+
 </html>
