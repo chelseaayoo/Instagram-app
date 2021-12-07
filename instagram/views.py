@@ -1,160 +1,185 @@
-from django.http  import HttpResponse
-from django.shortcuts import render,redirect, get_object_or_404
-from django.http import Http404,HttpResponseRedirect
-from django.contrib.auth.forms import UserCreationForm
-from django.contrib import messages
-from . forms import Registration,UpdateUser,UpdateProfile,CommentsForm,postPhotoForm
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from .models import Image,Profile,Like,Follows
-from django.http import JsonResponse
-from django.contrib.auth.models import User
-from .email import send_welcome_email
-from django.core.exceptions import ObjectDoesNotExist
-
+from .models import *
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 # Create your views here.
-def welcome(request):
-    return HttpResponse('Get started with Instagram')
 
-@login_required
+
+@login_required(login_url='/accounts/login/')
 def index(request):
-  comment_form = CommentsForm()
-  post_form = postPhotoForm()
-  photos = Image.display_photos()
-  all_users = User.objects.all()
-  
-  return render (request,'index.html',{"photos":photos,"comment_form":comment_form,"post":post_form,"all_users":all_users})
+    # get all the images from the database and order them by the date they were created
+    images = Image.objects.all().order_by('-image_date')
+    return render(request, 'index.html', {'images': images})
 
-@login_required
-def post(request):
-  if request.method == 'POST':
-    post_form = postPhotoForm(request.POST,request.FILES) 
-    if post_form.is_valid():
-      the_post = post_form.save(commit = False)
-      the_post.user = request.user
-      the_post.save()
-      return redirect('home')
 
-  else:
-    post_form = postPhotoForm()
-  return render(request,'post.html',{"post_form":post_form})
-
-def detail(request,photo_id):
-  current_user = request.user
-  try:
-    photo = get_object_or_404(Image, pk = photo_id)
-  except ObjectDoesNotExist:
-    raise Http404()
-  return render(request, 'photo_details.html', {'photo':photo,'current_user':current_user})
-
-def register(request):
-  if request.method == 'POST':
-    form = Registration(request.POST)
-    if form.is_valid():
-      form.save()
-      email = form.cleaned_data['email']
-      username = form.cleaned_data.get('username')
-
-      messages.success(request,f'Account for {username} created,you can now login')
-      return redirect('login')
-  else:
-    form = Registration()
-  return render(request,'registration/registration_form.html',{"form":form})
-
-@login_required
+# profile page
+@login_required(login_url='/accounts/login/')
 def profile(request):
-  comment_form = CommentsForm()
-  current_user = request.user
-  photos = Image.objects.all().order_by('-posted_at')
-  all_users = User.objects.all()
-  user_photos = Image.objects.filter(user_id = current_user.id).all()
-  
-  return render(request,'profile/profile.html',{"photos":photos,'all_users':all_users,'comment_form':comment_form,'user_photos':user_photos,"current_user":current_user})
-
-@login_required
-def search(request):
-  if 'search_user' in request.GET and request.GET["search_user"]:
-    search_term = request.GET.get('search_user')
-    users = Profile.search_profiles(search_term)
-    photos = Image.search_photos(search_term)
-    return render(request,'search.html',{"users":users,"photos":photos})
-  else:
-    return render(request,'search.html')
-
-@login_required
-def allcomments(request,photo_id):
-  photo = Image.objects.filter(pk = photo_id).first()
-  return render(request,'comments.html',{"photo":photo})
-
-@login_required
-def users_profile(request,pk):
-  comment_form = CommentsForm()
-  user = User.objects.get(pk = pk)
-  photos = Image.objects.filter(user = user)
-  c_user = request.user
-  
-  return render(request,'profile/users_profile.html',{"user":user,'comment_form':comment_form,
-"photos":photos,"c_user":c_user})
-
-@login_required
-def update_profile(request):
-  if request.method == 'POST':
-    user_form = UpdateUser(request.POST,instance=request.user)
-    profile_form = UpdateProfile(request.POST,request.FILES,instance=request.user.profile)
-    if user_form.is_valid() and profile_form.is_valid():
-      user_form.save()
-      profile_form.save()
-      messages.success(request,'Your Profile account has been updated successfully')
-      return redirect('profile')
-  else:
-    user_form = UpdateUser(instance=request.user)
-    profile_form = UpdateProfile(instance=request.user.profile) 
-  params = {
-    'user_form':user_form,
-    'profile_form':profile_form
-  }
-  return render(request,'profile/update.html',params)
-
-@login_required
-def follow(request,user_id):
-  followee = request.user
-  followed = Follows.objects.get(pk=user_id)
-  follow_data,created = Follows.objects.get_or_create(follower = followee,followee = followed)
-  follow_data.save()
-  return redirect('others_profile')
-
-def like(request, image_id):
     current_user = request.user
-    image=Image.objects.get(id=image_id)
-    new_like,created= Like.objects.get_or_create(liker=current_user, image=image)
-    new_like.save()
+    # get images for the current logged in user
+    images = Image.objects.filter(user_id=current_user.id)
+    # get the profile of the current logged in user
+    profile = Profile.objects.filter(user_id=current_user.id).first()
+    return render(request, 'profile.html', {"images": images, "profile": profile})
+    # return render(request, 'profile.html')
 
-    return HttpResponseRedirect(request.META['HTTP_REFERER'])
 
-@login_required
-def unfollow(request,user_id):
-  followee = request.user
-  follower = Follows.objects.get(pk=user_id)
-  follow_data = Follows.objects.filter(follower = follower,followee = followee).first()
-  follow_data.delete()
-  return redirect('users_profile')
+# save image  with image name,image caption and upload image to cloudinary
+@login_required(login_url='/accounts/login/')
+def save_image(request):
+    if request.method == 'POST':
+        image_name = request.POST['image_name']
+        image_caption = request.POST['image_caption']
+        image_file = request.FILES['image_file']
+        image_file = cloudinary.uploader.upload(image_file)
+        image_url = image_file['url']
+        image_public_id = image_file['public_id']
+        image = Image(image_name=image_name, image_caption=image_caption, image=image_url,
+                      profile_id=request.POST['user_id'], user_id=request.POST['user_id'])
+        image.save_image()
+        return redirect('/profile', {'success': 'Image Uploaded Successfully'})
+        # return render(request, 'profile.html', {'success': 'Image Uploaded Successfully'})
+    else:
+        return render(request, 'profile.html', {'danger': 'Image Upload Failed'})
 
-@login_required
-def delete(request,photo_id):
-  current_user = request.user
-  photo = Image.objects.get(pk=photo_id)
-  if photo:
-    photo.delete_post()
-  return redirect('home')
 
-@login_required
-def commentFunction(request,photo_id):
-  c_form = CommentsForm()
-  photo = Image.objects.filter(pk = photo_id).first()
-  if request.method == 'POST':
-    c_form = CommentsForm(request.POST)
-    if c_form.is_valid():
-      comment = c_form.save(commit = False)
-      comment.user = request.user
-      comment.photo = photo
-      comment.save() 
-  return redirect('home')
+# update profile with first name,last name,username,email and upload profile image to cloudinary
+@login_required(login_url='/accounts/login/')
+def update_profile(request):
+    if request.method == 'POST':
+
+        current_user = request.user
+
+        first_name = request.POST['first_name']
+        last_name = request.POST['last_name']
+        username = request.POST['username']
+        email = request.POST['email']
+
+        bio = request.POST['bio']
+
+        profile_image = request.FILES['profile_pic']
+        profile_image = cloudinary.uploader.upload(profile_image)
+        profile_url = profile_image['url']
+
+        user = User.objects.get(id=current_user.id)
+
+        # check if user exists in profile table and if not create a new profile
+        if Profile.objects.filter(user_id=current_user.id).exists():
+
+            profile = Profile.objects.get(user_id=current_user.id)
+            profile.profile_photo = profile_url
+            profile.bio = bio
+            profile.save()
+        else:
+            profile = Profile(user_id=current_user.id,
+                              profile_photo=profile_url, bio=bio)
+            profile.save_profile()
+
+        user.first_name = first_name
+        user.last_name = last_name
+        user.username = username
+        user.email = email
+
+        user.save()
+
+        return redirect('/profile', {'success': 'Profile Updated Successfully'})
+
+        # return render(request, 'profile.html', {'success': 'Profile Updated Successfully'})
+    else:
+        return render(request, 'profile.html', {'danger': 'Profile Update Failed'})
+
+
+# like image
+@login_required(login_url='/accounts/login/')
+def like_image(request, id):
+    likes = Likes.objects.filter(image_id=id).first()
+    # check if the user has already liked the image
+    if Likes.objects.filter(image_id=id, user_id=request.user.id).exists():
+        # unlike the image
+        likes.delete()
+        # reduce the number of likes by 1 for the image
+        image = Image.objects.get(id=id)
+        # check if the image like_count is equal to 0
+        if image.like_count == 0:
+            image.like_count = 0
+            image.save()
+        else:
+            image.like_count -= 1
+            image.save()
+        return redirect('/')
+    else:
+        likes = Likes(image_id=id, user_id=request.user.id)
+        likes.save()
+        # increase the number of likes by 1 for the image
+        image = Image.objects.get(id=id)
+        image.like_count = image.like_count + 1
+        image.save()
+        return redirect('/')
+
+
+# single image page with comments
+@login_required(login_url='/accounts/login/')
+def single_image(request, id):
+    image = Image.objects.get(id=id)
+    # get related images to the image that is being viewed by the user and order them by the date they were created
+    related_images = Image.objects.filter(
+        user_id=image.user_id).order_by('-image_date')
+    title = image.image_name
+    # check if image exists
+    if Image.objects.filter(id=id).exists():
+        # get all the comments for the image
+        comments = Comments.objects.filter(image_id=id)
+        return render(request, 'picture.html', {'image': image, 'comments': comments, 'images': related_images, 'title': title})
+    else:
+        return redirect('/')
+
+
+# save comment
+@login_required(login_url='/accounts/login/')
+def save_comment(request):
+    if request.method == 'POST':
+        comment = request.POST['comment']
+        image_id = request.POST['image_id']
+        image = Image.objects.get(id=image_id)
+        user = request.user
+        comment = Comments(comment=comment, image_id=image_id, user_id=user.id)
+        comment.save_comment()
+        # increase the number of comments by 1 for the image
+        image.comment_count = image.comment_count + 1
+        image.save()
+        return redirect('/picture/' + str(image_id))
+    else:
+        return redirect('/')
+
+
+# user profile page with images
+@login_required(login_url='/accounts/login/')
+def user_profile(request, id):
+    # check if user exists
+    if User.objects.filter(id=id).exists():
+        # get the user
+        user = User.objects.get(id=id)
+        # get all the images for the user
+        images = Image.objects.filter(user_id=id)
+        # get the profile of the user
+        profile = Profile.objects.filter(user_id=id).first()
+        return render(request, 'user-profile.html', {'images': images, 'profile': profile, 'user': user})
+    else:
+        return redirect('/')
+
+
+# search for images
+@login_required(login_url='/accounts/login/')
+def search_images(request):
+    if 'search' in request.GET and request.GET['search']:
+        search_term = request.GET.get('search').lower()
+        images = Image.search_by_image_name(search_term)
+        message = f'{search_term}'
+        title = message
+
+        return render(request, 'search.html', {'success': message, 'images': images})
+    else:
+        message = 'You havent searched for any term'
+        return render(request, 'search.html', {'danger': message})
